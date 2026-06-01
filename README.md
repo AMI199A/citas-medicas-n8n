@@ -39,7 +39,7 @@ Sistema que automatiza el ciclo completo de una cita médica:
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/TU_USUARIO/citas-medicas-n8n.git
+git clone https://github.com/AMI199A/citas-medicas-n8n.git
 cd citas-medicas-n8n
 
 # 2. Crear archivo de variables de entorno
@@ -177,11 +177,17 @@ docker compose down -v
 ---
 
 ## 📹 Video demo
-[Ver en Google Drive](https://drive.google.com/tu-enlace-aqui)
+[Ver en Google Drive](https://drive.google.com/file/d/1iSjY3pEuWmKudCTie8DpZDp0YiSe6Zcr/view?usp=sharing)
+
+---
+## DOCUMENTACION TECNICO
+
+[Ver en Google Drive](https://drive.google.com/drive/folders/16OF1SZwFPOLJUf8i3AhKeu5uQBgxW5sN?usp=sharing)
 
 ---
 
 ## 👤 Autor
 **Amilcar Caal**  
-Carné: XXXXXXX  
-Curso: Análisis de Sistemas I — 2025
+Carné: 0902-22-11171  
+Curso: Análisis de Sistemas I — 2026
+
