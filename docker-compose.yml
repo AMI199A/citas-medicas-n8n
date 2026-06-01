@@ -1,0 +1,134 @@
+version: "3.8"
+
+services:
+
+  # ─────────────────────────────────────────
+  # Base de datos principal
+  # ─────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: citas_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - citas_net
+
+  # ─────────────────────────────────────────
+  # Interfaz visual para la base de datos
+  # ─────────────────────────────────────────
+  adminer:
+    image: adminer:latest
+    container_name: citas_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - citas_net
+
+  # ─────────────────────────────────────────
+  # Motor de automatización n8n
+  # ─────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: citas_n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # ── Base de datos para n8n ──
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_POSTGRESDB_SCHEMA: n8n
+
+      # ── Configuración general ──
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      GENERIC_TIMEZONE: America/Guatemala
+      N8N_LOG_LEVEL: info
+      N8N_LOG_OUTPUT: console,file
+      N8N_LOG_FILE_LOCATION: /home/node/.n8n/logs/n8n.log
+
+      # ── Seguridad ──
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+
+      # ── Telegram (opcional) ──
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+
+      # ── Email (opcional, usa SMTP local Mailpit) ──
+      N8N_EMAIL_MODE: smtp
+      N8N_SMTP_HOST: mailpit
+      N8N_SMTP_PORT: 1025
+      N8N_SMTP_SENDER: noreply@clinica.local
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./input:/data/input       # Archivos CSV/JSON de entrada
+      - ./output:/data/output     # Reportes, PDFs, notificaciones
+      - ./logs:/data/logs         # Bitácora de ejecución
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - citas_net
+
+  # ─────────────────────────────────────────
+  # Servidor SMTP local para emails (sin costo)
+  # Sustituye a Gmail/SendGrid en entornos local
+  # ─────────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # Puerto SMTP para n8n
+      - "8025:8025"   # Puerto Web para ver tu bandeja de entrada
+    networks:
+      - citas_net
+
+  # ─────────────────────────────────────────
+  # Formulario web local (interfaz de escritorio)
+  # ─────────────────────────────────────────
+  formulario:
+    image: nginx:alpine
+    container_name: citas_formulario
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    volumes:
+      - ./formulario:/usr/share/nginx/html:ro
+    networks:
+      - citas_net
+
+volumes:
+  postgres_data:
+  n8n_data:
+
+networks:
+  citas_net:
+    driver: bridge

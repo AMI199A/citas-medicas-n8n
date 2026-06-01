@@ -1,0 +1,481 @@
+{
+  "name": "WF2-Procesamiento",
+  "id": "zYa6D0zjtL3BRTs4",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "365be770-93c2-4d7a-ba9e-5bb740585483",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  '{{ $json.paciente_nombre }}' as paciente_nombre,\n  '{{ $json.paciente_tel }}' as paciente_tel,\n  '{{ $json.paciente_email }}' as paciente_email,\n  '{{ $json.especialidad }}' as especialidad,\n  '{{ $json.doctor }}' as doctor,\n  '{{ $json.fecha_cita }}' as fecha_cita,\n  '{{ $json.hora_cita }}' as hora_cita,\n  '{{ $json.motivo }}' as motivo,\n  '{{ $json.canal_ingreso }}' as canal_ingreso,\n  (SELECT COUNT(*) FROM citas \n   WHERE doctor = '{{ $json.doctor }}'\n   AND fecha_cita = '{{ $json.fecha_cita }}'\n   AND hora_cita = '{{ $json.hora_cita }}'\n   AND estado != 'cancelada') as total",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "5cef78b8-bb52-472b-8e6b-928592f4232f",
+      "name": "Execute a SQL query",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "94hGlbRqnjAbeSRh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3d5c92cd-24bd-4cb5-b028-588ce9d3e153",
+              "leftValue": "={{ $json.total }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        16
+      ],
+      "id": "06276276-17f8-483a-8b9e-65e8bb5a166f",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.especialidad }}",
+                    "rightValue": "Medicina General",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "dd75671c-ddeb-4e35-a4ba-1ae1bcc26d9e"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "medicina_general"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "68ae8753-cb7b-4906-9ef3-cabd02ff423a",
+                    "leftValue": "={{ $json.especialidad }}",
+                    "rightValue": "Pediatría",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pediatria"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5ba79825-a4d7-44e8-8778-9f4cd14ae280",
+                    "leftValue": "={{ $json.especialidad }}",
+                    "rightValue": "Odontología",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "odontologia"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fecc2877-2a76-41af-8071-ddd530732c5a",
+                    "leftValue": "={{ $json.especialidad }}",
+                    "rightValue": "Ginecología",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ginecologia"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        -144
+      ],
+      "id": "3b75e7fe-76de-4b2e-8b73-0536e5f4339d",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $input.item.json;\nconst fecha = item.fecha_cita.replace(/-/g, '');\nconst rand = Math.floor(Math.random() * 9000) + 1000;\nconst esp = item.especialidad.substring(0, 3).toUpperCase();\nconst numeroCita = `CIT-${esp}-${fecha}-${rand}`;\n\nreturn {\n  json: {\n    ...item,\n    numero_cita: numeroCita\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        -288
+      ],
+      "id": "11ae0eb8-5d59-4955-94c3-c470c9a9b3eb",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO citas (\n  numero_cita, paciente_nombre, paciente_tel,\n  paciente_email, especialidad, doctor,\n  fecha_cita, hora_cita, motivo,\n  canal_ingreso, estado\n) VALUES (\n  '{{ $json.numero_cita }}',\n  '{{ $json.paciente_nombre }}',\n  '{{ $json.paciente_tel }}',\n  '{{ $json.paciente_email }}',\n  '{{ $json.especialidad }}',\n  '{{ $json.doctor }}',\n  '{{ $json.fecha_cita }}',\n  '{{ $json.hora_cita }}',\n  '{{ $json.motivo }}',\n  '{{ $json.canal_ingreso }}',\n  'confirmada'\n)\nRETURNING id, numero_cita",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        992,
+        -288
+      ],
+      "id": "7bbf751a-114b-47f6-a994-5b3ea78c84e8",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "postgres": {
+          "id": "94hGlbRqnjAbeSRh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO auditoria \n  (accion, entidad, entidad_id, canal, resultado)\nVALUES (\n  'CITA_CREADA',\n  'citas',\n  '{{ $json.numero_cita }}',\n  '{{ $json.canal_ingreso }}',\n  'exitoso'\n)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1200,
+        -288
+      ],
+      "id": "464eaedb-ae98-4850-ab35-ea6f54c1a8ff",
+      "name": "Execute a SQL query2",
+      "credentials": {
+        "postgres": {
+          "id": "94hGlbRqnjAbeSRh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-email-confirm",
+              "leftValue": "={{ $('Code in JavaScript').item.json.paciente_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1408,
+        -288
+      ],
+      "id": "if-has-email-confirm",
+      "name": "If Has Email"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const patientData = $node[\"Code in JavaScript\"].json;\nconst fecha = patientData.fecha_cita.replace(/-/g, '');\nconst horaStart = patientData.hora_cita.replace(/:/g, '') + '00';\nconst [h, m] = patientData.hora_cita.split(':').map(Number);\nconst endM = (m + 30) % 60;\nconst endH = h + Math.floor((m + 30) / 60);\nconst endHStr = String(endH).padStart(2, '0');\nconst endMStr = String(endM).padStart(2, '0');\nconst horaEnd = endHStr + endMStr + '00';\nconst dtstart = fecha + 'T' + horaStart;\nconst dtend = fecha + 'T' + horaEnd;\nconst dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';\nconst icsText = 'BEGIN:VCALENDAR\\r\\nVERSION:2.0\\r\\nPRODID:-//Clinica Local//NONSGML Citas//ES\\r\\nCALSCALE:GREGORIAN\\r\\nMETHOD:PUBLISH\\r\\nBEGIN:VEVENT\\r\\nUID:' + patientData.numero_cita + '@clinica.local\\r\\nDTSTAMP:' + dtstamp + '\\r\\nDTSTART;TZID=America/Guatemala:' + dtstart + '\\r\\nDTEND;TZID=America/Guatemala:' + dtend + '\\r\\nSUMMARY:Cita Medica - ' + patientData.paciente_nombre + '\\r\\nDESCRIPTION:Cita de ' + patientData.especialidad + ' con ' + (patientData.doctor || 'Sin preferencia') + '. Motivo: ' + (patientData.motivo || 'No especificado') + '\\r\\nLOCATION:Clinica Local\\r\\nEND:VEVENT\\r\\nEND:VCALENDAR';\nreturn {\n  json: patientData,\n  binary: {\n    attachment: {\n      data: Buffer.from(icsText).toString('base64'),\n      mimeType: 'text/calendar',\n      fileName: 'cita.ics'\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        -400
+      ],
+      "id": "generate-ics-file",
+      "name": "Generate ICS File"
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@clinica.local",
+        "toEmail": "={{ $('Code in JavaScript').item.json.paciente_email }}",
+        "subject": "=Confirmación de Cita Médica - {{ $('Code in JavaScript').item.json.numero_cita }}",
+        "emailFormat": "html",
+        "html": "=<h3>Confirmación de Cita Médica</h3><p>Estimado(a) <b>{{ $('Code in JavaScript').item.json.paciente_nombre }}</b>,</p><p>Su cita médica ha sido agendada y confirmada con éxito. Adjuntamos a este correo el recordatorio para su calendario.</p><p><b>Detalles de la cita:</b><br>Número de cita: {{ $('Code in JavaScript').item.json.numero_cita }}<br>Especialidad: {{ $('Code in JavaScript').item.json.especialidad }}<br>Doctor: {{ $('Code in JavaScript').item.json.doctor || 'Sin preferencia' }}<br>Fecha: {{ $('Code in JavaScript').item.json.fecha_cita }}<br>Hora: {{ $('Code in JavaScript').item.json.hora_cita }}</p><p>Si desea cancelar esta cita, puede hacerlo desde el portal o enviando un mensaje a nuestro bot de Telegram.</p>",
+        "options": {
+          "attachments": "attachment"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1800,
+        -400
+      ],
+      "id": "email-send-confirm",
+      "name": "Send Confirmation Email",
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials-placeholder",
+          "name": "SMTP account"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO errores \n  (workflow_nombre, tipo_error, mensaje, datos_entrada)\nVALUES (\n  'WF2-Procesamiento',\n  'Solapamiento',\n  'Horario ya ocupado para ese doctor',\n  '{{ JSON.stringify($json) }}'\n)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        576,
+        192
+      ],
+      "id": "56675b2f-c2b8-456b-bc72-35a257f674ff",
+      "name": "Execute a SQL query3",
+      "credentials": {
+        "postgres": {
+          "id": "94hGlbRqnjAbeSRh",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query2": {
+      "main": [
+        [
+          {
+            "node": "If Has Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Email": {
+      "main": [
+        [
+          {
+            "node": "Generate ICS File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate ICS File": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Confirmation Email": {
+      "main": []
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}

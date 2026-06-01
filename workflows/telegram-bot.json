@@ -1,0 +1,211 @@
+{
+  "name": "telegram-bot",
+  "id": "telBotWf1234567",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-updates",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "telegram-updates",
+      "position": [0, 0],
+      "id": "telegram-trigger",
+      "name": "Telegram Webhook"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst text = body.message?.text || '';\nconst chatId = body.message?.chat?.id;\nconst userId = body.message?.from?.id;\n\nlet command = 'help';\nlet arg = '';\n\nif (text.startsWith('/listar') || text.startsWith('/citas')) {\n  command = 'listar';\n  arg = text.split(' ').slice(1).join(' ').trim();\n} else if (text.startsWith('/cancelar')) {\n  command = 'cancelar';\n  arg = text.split(' ').slice(1).join(' ').trim();\n}\n\nreturn {\n  json: { command, arg, chatId, userId, originalText: text }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "id": "parse-command",
+      "name": "Parse Command"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3},
+                "conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "listar", "operator": {"type": "string", "operation": "equals"}, "id": "c-listar"}],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "listar"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3},
+                "conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "cancelar", "operator": {"type": "string", "operation": "equals"}, "id": "c-cancelar"}],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancelar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [400, 0],
+      "id": "command-router",
+      "name": "Command Router"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT numero_cita, paciente_nombre, especialidad, doctor, fecha_cita::text as fecha_cita, hora_cita::text as hora_cita, estado FROM citas WHERE ('{{ $json.arg }}' = '' OR paciente_tel = '{{ $json.arg }}' OR numero_cita = '{{ $json.arg }}' OR paciente_nombre ILIKE '%{{ $json.arg }}%') AND estado != 'cancelada' ORDER BY fecha_cita DESC, hora_cita DESC LIMIT 5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [600, -150],
+      "id": "db-select-citas",
+      "name": "Select Citas",
+      "credentials": {"postgres": {"id": "94hGlbRqnjAbeSRh", "name": "Postgres account"}}
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all().map(i => i.json);\nconst chatId = items[0]?.chatId || $('Parse Command').first().json.chatId;\nconst arg = $('Parse Command').first().json.arg || '';\n\nif (items.length === 0 || !items[0].numero_cita) {\n  return [{ json: { chatId, text: `❌ No se encontraron citas activas${arg ? ` para: \"${arg}\"` : '.'}` } }];\n}\n\nlet msg = `🏥 *Citas médicas encontradas:*\\n\\n`;\nitems.forEach(c => {\n  msg += `🆔 *${c.numero_cita}* (${c.estado.toUpperCase()})\\n`;\n  msg += `👤 ${c.paciente_nombre}\\n`;\n  msg += `📅 ${c.fecha_cita} | ${c.hora_cita ? c.hora_cita.substring(0,5) : ''}\\n`;\n  msg += `📋 ${c.especialidad} - ${c.doctor || 'Sin asignar'}\\n\\n`;\n});\nmsg += `Para cancelar:\\n\\`/cancelar <numero_cita>\\``;\n\nreturn [{ json: { chatId, text: msg } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, -150],
+      "id": "format-list-message",
+      "name": "Format List Message"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1050, -150],
+      "id": "telegram-send-list",
+      "name": "Send List Message",
+      "credentials": {"telegramApi": {"id": "Koh0801o7naljX8K", "name": "Telegram account"}}
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE citas SET estado = 'cancelada', actualizado_en = NOW() WHERE numero_cita = '{{ $json.arg }}' AND estado != 'cancelada' RETURNING numero_cita, paciente_nombre, paciente_email, paciente_tel, especialidad, doctor, fecha_cita::text as fecha_cita, hora_cita::text as hora_cita, estado",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [600, 150],
+      "id": "db-update-citas",
+      "name": "Cancel Appointment",
+      "credentials": {"postgres": {"id": "94hGlbRqnjAbeSRh", "name": "Postgres account"}}
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all().map(i => i.json);\nconst chatId = $('Parse Command').first().json.chatId;\nconst arg = $('Parse Command').first().json.arg || '';\n\nif (items.length === 0 || !items[0].numero_cita) {\n  return [{ json: { chatId, success: false, text: `❌ No se encontró cita activa con número *${arg}*.\\nVerifica el número e intenta de nuevo.` } }];\n}\n\nconst cita = items[0];\nreturn [{ json: { ...cita, chatId, success: true, text: `✅ Cita *${cita.numero_cita}* cancelada exitosamente.\\n\\n👤 ${cita.paciente_nombre}\\n📋 ${cita.especialidad}\\n📅 ${cita.fecha_cita} | ${cita.hora_cita ? cita.hora_cita.substring(0,5) : ''}` } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 150],
+      "id": "format-cancel-message",
+      "name": "Format Cancel Message"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1000, 150],
+      "id": "telegram-send-cancel",
+      "name": "Send Cancel Message",
+      "credentials": {"telegramApi": {"id": "Koh0801o7naljX8K", "name": "Telegram account"}}
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO auditoria (accion, entidad, entidad_id, canal, resultado, datos) VALUES ('CITA_CANCELADA', 'citas', '{{ $json.numero_cita }}', 'telegram', 'exitoso', '{}'::jsonb)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1200, 150],
+      "id": "postgres-audit-telegram-cancel",
+      "name": "Audit Telegram Cancel",
+      "credentials": {"postgres": {"id": "94hGlbRqnjAbeSRh", "name": "Postgres account"}}
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const chatId = $('Parse Command').first().json.chatId;\nconst text = `👋 *¡Hola! Bienvenido al asistente de Clínica Local.*\\n\\nComandos disponibles:\\n\\n📅 *Ver Citas:*\\n\\`/listar\\` - Todas las citas\\n\\`/listar <nombre o teléfono>\\` - Filtrar\\n\\n❌ *Cancelar Cita:*\\n\\`/cancelar <numero_cita>\\``;\nreturn [{ json: { chatId, text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 350],
+      "id": "format-help-message",
+      "name": "Format Help Message"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [800, 350],
+      "id": "telegram-send-help",
+      "name": "Send Help Message",
+      "credentials": {"telegramApi": {"id": "Koh0801o7naljX8K", "name": "Telegram account"}}
+    }
+  ],
+  "connections": {
+    "Telegram Webhook": {
+      "main": [[{"node": "Parse Command", "type": "main", "index": 0}]]
+    },
+    "Parse Command": {
+      "main": [[{"node": "Command Router", "type": "main", "index": 0}]]
+    },
+    "Command Router": {
+      "main": [
+        [{"node": "Select Citas", "type": "main", "index": 0}],
+        [{"node": "Cancel Appointment", "type": "main", "index": 0}],
+        [{"node": "Format Help Message", "type": "main", "index": 0}]
+      ]
+    },
+    "Select Citas": {
+      "main": [[{"node": "Format List Message", "type": "main", "index": 0}]]
+    },
+    "Format List Message": {
+      "main": [[{"node": "Send List Message", "type": "main", "index": 0}]]
+    },
+    "Cancel Appointment": {
+      "main": [[{"node": "Format Cancel Message", "type": "main", "index": 0}]]
+    },
+    "Format Cancel Message": {
+      "main": [[{"node": "Send Cancel Message", "type": "main", "index": 0}]]
+    },
+    "Send Cancel Message": {
+      "main": [[{"node": "Audit Telegram Cancel", "type": "main", "index": 0}]]
+    },
+    "Format Help Message": {
+      "main": [[{"node": "Send Help Message", "type": "main", "index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

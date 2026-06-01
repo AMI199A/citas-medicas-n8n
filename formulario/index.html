@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clínica Local — Citas Médicas</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.10);
+      padding: 40px;
+      max-width: 560px;
+      width: 100%;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .logo h1 { font-size: 1.6rem; color: #1a5fa8; font-weight: 700; }
+    .logo p  { color: #6b7280; font-size: 0.9rem; margin-top: 4px; }
+
+    /* Tabs Styling */
+    .tabs-container {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: 2px solid #1a5fa8;
+      color: #1a5fa8;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s ease-in-out;
+    }
+    .tab-btn.active, .tab-btn:hover {
+      background: #1a5fa8;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(26, 95, 168, 0.2);
+    }
+
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #111827;
+      transition: border-color .2s;
+      background: #fafafa;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #1a5fa8;
+      background: #fff;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field { margin-bottom: 18px; }
+    textarea { resize: vertical; min-height: 80px; }
+
+    .btn {
+      width: 100%;
+      background: #1a5fa8;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s, transform 0.1s;
+      margin-top: 6px;
+    }
+    .btn:hover { background: #154d8a; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    @keyframes shake {
+      0%   { transform: translateX(0); }
+      15%  { transform: translateX(-7px); }
+      30%  { transform: translateX(7px); }
+      45%  { transform: translateX(-5px); }
+      60%  { transform: translateX(5px); }
+      75%  { transform: translateX(-3px); }
+      90%  { transform: translateX(3px); }
+      100% { transform: translateX(0); }
+    }
+    .alert {
+      display: none;
+      padding: 14px 18px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-left: 5px solid transparent;
+      line-height: 1.5;
+    }
+    .alert.success {
+      background: #d1fae5;
+      color: #065f46;
+      border-left-color: #10b981;
+      display: block;
+    }
+    .alert.error {
+      background: #fff1f1;
+      color: #991b1b;
+      border-left-color: #ef4444;
+      display: block;
+      animation: shake 0.45s ease;
+    }
+
+    .canal-badge {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1e40af;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 20px;
+      padding: 3px 12px;
+      margin-bottom: 10px;
+    }
+    .divider { border: none; border-top: 1.5px solid #e5e7eb; margin: 20px 0; }
+
+    /* Appointment List Custom Styling */
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .search-box input {
+      flex: 1;
+    }
+    .search-box .btn-search {
+      width: auto;
+      margin-top: 0;
+      padding: 11px 20px;
+    }
+    .cita-card {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .cita-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border-color: #cbd5e1;
+    }
+    .cita-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    .cita-numero {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #1a5fa8;
+    }
+    .cita-estado {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .cita-estado.pendiente { background: #fef3c7; color: #d97706; }
+    .cita-estado.confirmada { background: #d1fae5; color: #065f46; }
+    .cita-estado.cancelada { background: #fee2e2; color: #991b1b; }
+    .cita-estado.completada { background: #e0f2fe; color: #0369a1; }
+    
+    .cita-body p {
+      font-size: 0.85rem;
+      color: #475569;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .cita-body p span.val {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .btn-cancelar {
+      width: 100%;
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 12px;
+    }
+    .btn-cancelar:hover { background: #dc2626; }
+    .btn-cancelar:active { transform: scale(0.98); }
+    .btn-cancelar:disabled { background: #fca5a5; cursor: not-allowed; }
+
+    .no-results {
+      text-align: center;
+      padding: 30px 20px;
+      color: #64748b;
+      font-size: 0.95rem;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1.5px dashed #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1>🏥 Clínica Local</h1>
+    <p>Sistema de agendamiento de citas médicas</p>
+    <span class="canal-badge">Formulario de escritorio</span>
+    
+    <!-- Tab Navigation -->
+    <div class="tabs-container">
+      <button type="button" id="tabAgendar" class="tab-btn active">Agendar Cita</button>
+      <button type="button" id="tabVerCitas" class="tab-btn">Ver Citas</button>
+    </div>
+  </div>
+
+  <div id="alerta" class="alert" role="alert"></div>
+
+  <!-- Tab 1: Agendar Cita -->
+  <div id="contentAgendar">
+    <form id="formCita" novalidate>
+      <hr class="divider">
+      <p style="font-size:.8rem;color:#6b7280;margin-bottom:16px;font-weight:600;">DATOS DEL PACIENTE</p>
+
+      <div class="field">
+        <label for="nombre">Nombre completo *</label>
+        <input type="text" id="nombre" name="paciente_nombre" required placeholder="Ej. Juan Pérez García">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="tel">Teléfono *</label>
+          <input type="tel" id="tel" name="paciente_tel" required placeholder="5555-0000">
+        </div>
+        <div class="field">
+          <label for="email">Correo electrónico</label>
+          <input type="email" id="email" name="paciente_email" placeholder="correo@ejemplo.com">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="dpi">DPI / Identificación</label>
+        <input type="text" id="dpi" name="paciente_dpi" placeholder="0000 00000 0000">
+      </div>
+
+      <hr class="divider">
+      <p style="font-size:.8rem;color:#6b7280;margin-bottom:16px;font-weight:600;">DATOS DE LA CITA</p>
+
+      <div class="row">
+        <div class="field">
+          <label for="especialidad">Especialidad *</label>
+          <select id="especialidad" name="especialidad" required>
+            <option value="">Seleccionar...</option>
+            <option value="Medicina General">Medicina General</option>
+            <option value="Pediatría">Pediatría</option>
+            <option value="Odontología">Odontología</option>
+            <option value="Ginecología">Ginecología</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="doctor">Doctor preferido</label>
+          <select id="doctor" name="doctor">
+            <option value="">Sin preferencia</option>
+            <option value="Dr. Carlos Méndez">Dr. Carlos Méndez</option>
+            <option value="Dra. Ana López">Dra. Ana López</option>
+            <option value="Dr. Roberto Sánchez">Dr. Roberto Sánchez</option>
+            <option value="Dra. María García">Dra. María García</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="fecha">Fecha deseada *</label>
+          <input type="date" id="fecha" name="fecha_cita" required>
+        </div>
+        <div class="field">
+          <label for="hora">Hora deseada *</label>
+          <select id="hora" name="hora_cita" required>
+            <option value="">Seleccionar...</option>
+            <option>08:00</option><option>08:30</option>
+            <option>09:00</option><option>09:30</option>
+            <option>10:00</option><option>10:30</option>
+            <option>11:00</option><option>11:30</option>
+            <option>14:00</option><option>14:30</option>
+            <option>15:00</option><option>15:30</option>
+            <option>16:00</option><option>16:30</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="motivo">Motivo de consulta</label>
+        <textarea id="motivo" name="motivo" placeholder="Describe brevemente el motivo de tu consulta..."></textarea>
+      </div>
+
+      <button type="submit" class="btn" id="btnEnviar">Agendar cita</button>
+    </form>
+  </div>
+
+  <!-- Tab 2: Ver Citas -->
+  <div id="contentVerCitas" style="display: none;">
+    <hr class="divider">
+    <p style="font-size:.8rem;color:#6b7280;margin-bottom:16px;font-weight:600;">CONSULTA DE CITAS</p>
+    
+    <div class="search-box">
+      <input type="text" id="buscarInput" placeholder="Buscar por Nombre, Teléfono o DPI...">
+      <button type="button" id="btnBuscar" class="btn btn-search">Buscar</button>
+    </div>
+
+    <div id="loadingCitas" style="display: none; text-align: center; margin: 20px 0; color: #64748b;">
+      <p>🔍 Buscando citas...</p>
+    </div>
+
+    <div id="listaCitasContainer">
+      <div class="no-results">
+        Ingresa tu nombre, teléfono o DPI para buscar tus citas registradas.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Establecer fecha mínima = mañana
+  const fechaInput = document.getElementById('fecha');
+  const manana = new Date();
+  manana.setDate(manana.getDate() + 1);
+  fechaInput.min = manana.toISOString().split('T')[0];
+
+  // URLs de webhooks de n8n
+  const WEBHOOK_INGESTA = 'http://localhost:5678/webhook/citas-ingesta';
+  const WEBHOOK_LISTAR = 'http://localhost:5678/webhook/listar-citas';
+  const WEBHOOK_CANCELAR = 'http://localhost:5678/webhook/cancelar';
+
+  // --- Lógica de navegación por pestañas ---
+  const tabAgendar = document.getElementById('tabAgendar');
+  const tabVerCitas = document.getElementById('tabVerCitas');
+  const contentAgendar = document.getElementById('contentAgendar');
+  const contentVerCitas = document.getElementById('contentVerCitas');
+  const alerta = document.getElementById('alerta');
+
+  function limpiarAlerta() {
+    alerta.className = 'alert';
+    alerta.style.display = 'none';
+  }
+
+  tabAgendar.addEventListener('click', () => {
+    tabAgendar.classList.add('active');
+    tabVerCitas.classList.remove('active');
+    contentAgendar.style.display = 'block';
+    contentVerCitas.style.display = 'none';
+    limpiarAlerta();
+  });
+
+  tabVerCitas.addEventListener('click', () => {
+    tabVerCitas.classList.add('active');
+    tabAgendar.classList.remove('active');
+    contentAgendar.style.display = 'none';
+    contentVerCitas.style.display = 'block';
+    limpiarAlerta();
+    
+    // Si ya hay valores en el formulario (como teléfono o DPI), pre-cargar en la búsqueda
+    const tel = document.getElementById('tel').value.trim();
+    const dpi = document.getElementById('dpi').value.trim();
+    const nombre = document.getElementById('nombre').value.trim();
+    
+    if (tel) {
+      document.getElementById('buscarInput').value = tel;
+      buscarCitas(tel);
+    } else if (dpi) {
+      document.getElementById('buscarInput').value = dpi;
+      buscarCitas(dpi);
+    } else if (nombre) {
+      document.getElementById('buscarInput').value = nombre;
+      buscarCitas(nombre);
+    }
+  });
+
+  // --- Lógica de Agendamiento de Citas ---
+  document.getElementById('formCita').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnEnviar');
+    limpiarAlerta();
+
+    const form = e.target;
+    const data = {
+      paciente_nombre:  form.paciente_nombre.value.trim(),
+      paciente_tel:     form.paciente_tel.value.trim(),
+      paciente_email:   form.paciente_email.value.trim(),
+      paciente_dpi:     form.paciente_dpi.value.trim(),
+      especialidad:     form.especialidad.value,
+      doctor:           form.doctor.value,
+      fecha_cita:       form.fecha_cita.value,
+      hora_cita:        form.hora_cita.value,
+      motivo:           form.motivo.value.trim(),
+      canal_ingreso:    'formulario',
+      timestamp:        new Date().toISOString()
+    };
+
+    // Validación básica en cliente
+    if (!data.paciente_nombre || !data.paciente_tel || !data.especialidad || !data.fecha_cita || !data.hora_cita) {
+      alerta.textContent = '⚠️ Por favor completa todos los campos obligatorios (*)';
+      alerta.className = 'alert error';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    try {
+      const resp = await fetch(WEBHOOK_INGESTA, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const text = await resp.text();
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch(e) {
+        result = { success: true, mensaje: 'Cita enviada correctamente' };
+      }
+
+      // ── Detectar respuesta de error de n8n ──────────────────────────────
+      // n8n puede devolver { status: 'error', message: '...' }
+      // o el formato legado { success: false, mensaje: '...' }
+      if (result.status === 'error') {
+        // Formato n8n: { status: 'error', message: '...' }
+        mostrarError(result.message || 'El horario ya está ocupado. Por favor elige otra hora o fecha.');
+        return; // detener flujo de éxito
+      }
+
+      if (result.success === false || result.success === 'false') {
+        // Formato legado de error
+        mostrarError(result.mensaje || 'Datos incorrectos o solapamiento detectado.');
+        return;
+      }
+
+      // ── Flujo de éxito ──────────────────────────────────────────────────
+      if (result.success === true || result.success === 'true' || result.status === 'ok' || result.status === 'success') {
+        alerta.textContent = `✅ ¡Cita agendada exitosamente! Número: ${result.numero_cita || 'generado'}`;
+        alerta.className = 'alert success';
+        alerta.style.display = 'block';
+        form.reset();
+        fechaInput.min = manana.toISOString().split('T')[0];
+      } else {
+        // Respuesta inesperada → mostrar como error genérico
+        mostrarError(result.mensaje || result.message || 'Respuesta inesperada del servidor. Intenta de nuevo.');
+      }
+    } catch (err) {
+      alerta.textContent = `✅ ¡Solicitud enviada! Tu cita está siendo procesada.`;
+      alerta.className = 'alert success';
+      alerta.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Agendar cita';
+    }
+  });
+
+  // ── Helper: mostrar mensaje de error con animación ─────────────────────
+  function mostrarError(mensaje) {
+    // Re-disparar la animación shake aunque el div ya esté visible
+    alerta.className = 'alert';
+    alerta.style.display = 'none';
+    // Forzar reflow para reiniciar la animación CSS
+    void alerta.offsetWidth;
+    alerta.textContent = `⛔ ${mensaje}`;
+    alerta.className = 'alert error';
+    alerta.style.display = 'block';
+    alerta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // --- Lógica de Consulta y Cancelación de Citas ---
+  const buscarInput = document.getElementById('buscarInput');
+  const btnBuscar = document.getElementById('btnBuscar');
+  const loadingCitas = document.getElementById('loadingCitas');
+  const listaCitasContainer = document.getElementById('listaCitasContainer');
+
+  btnBuscar.addEventListener('click', () => {
+    buscarCitas(buscarInput.value.trim());
+  });
+
+  buscarInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      buscarCitas(buscarInput.value.trim());
+    }
+  });
+
+  async function buscarCitas(query = '') {
+    loadingCitas.style.display = 'block';
+    listaCitasContainer.innerHTML = '';
+    
+    try {
+      const url = query ? `${WEBHOOK_LISTAR}?search=${encodeURIComponent(query)}` : WEBHOOK_LISTAR;
+      const resp = await fetch(url);
+      
+      if (!resp.ok) {
+        throw new Error('Error al listar las citas');
+      }
+
+      const citas = await resp.json();
+      renderCitas(citas);
+    } catch (error) {
+      console.error(error);
+      listaCitasContainer.innerHTML = `
+        <div class="no-results" style="color: #ef4444; border-color: #fca5a5;">
+          ❌ Error al conectar con el servidor. Asegúrate de que los flujos estén activos.
+        </div>
+      `;
+    } finally {
+      loadingCitas.style.display = 'none';
+    }
+  }
+
+  function renderCitas(citas) {
+    if (!Array.isArray(citas) || citas.length === 0) {
+      listaCitasContainer.innerHTML = `
+        <div class="no-results">
+          No se encontraron citas con los datos provistos.
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    citas.forEach(cita => {
+      const estadoClass = cita.estado.toLowerCase();
+      const showCancelButton = (cita.estado === 'confirmada' || cita.estado === 'pendiente');
+
+      html += `
+        <div class="cita-card">
+          <div class="cita-header">
+            <span class="cita-numero">${cita.numero_cita}</span>
+            <span class="cita-estado ${estadoClass}">${cita.estado}</span>
+          </div>
+          <div class="cita-body">
+            <p>Paciente: <span class="val">${cita.paciente_nombre}</span></p>
+            <p>Especialidad: <span class="val">${cita.especialidad}</span></p>
+            <p>Doctor: <span class="val">${cita.doctor || 'Sin preferencia'}</span></p>
+            <p>Fecha: <span class="val">${cita.fecha_cita}</span></p>
+            <p>Hora: <span class="val">${cita.hora_cita.substring(0, 5)}</span></p>
+          </div>
+          ${showCancelButton ? `
+            <button type="button" class="btn-cancelar" onclick="cancelarCita('${cita.numero_cita}')">
+              Cancelar Cita
+            </button>
+          ` : ''}
+        </div>
+      `;
+    });
+
+    listaCitasContainer.innerHTML = html;
+  }
+
+  // Hacer la función cancelar accesible globalmente
+  window.cancelarCita = async function(numeroCita) {
+    if (!confirm(`¿Estás seguro que deseas cancelar la cita ${numeroCita}?`)) {
+      return;
+    }
+
+    const btn = event.target;
+    const oldText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Cancelando...';
+
+    try {
+      const resp = await fetch(WEBHOOK_CANCELAR, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numero_cita: numeroCita })
+      });
+
+      const resData = await resp.json();
+
+      if (resData.success) {
+        alert(`✅ Cita ${numeroCita} cancelada exitosamente.`);
+        // Recargar la búsqueda actual
+        buscarCitas(buscarInput.value.trim());
+      } else {
+        alert(`❌ Error: ${resData.mensaje || 'No se pudo cancelar la cita'}`);
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    } catch (error) {
+      console.error(error);
+      alert('❌ Error de conexión al intentar cancelar la cita.');
+      btn.disabled = false;
+      btn.textContent = oldText;
+    }
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+{
+  "name": "listar-citas",
+  "id": "lisCitaWf1234567",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "listar-citas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "webhook-listar-citas",
+      "name": "Webhook",
+      "webhookId": "345bba65-2893-45a2-a87f-c7a968358300"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT \n  numero_cita, paciente_nombre, paciente_tel, paciente_dpi,\n  especialidad, doctor, fecha_cita::text as fecha_cita, hora_cita::text as hora_cita, estado\nFROM citas\nWHERE \n  ('{{ $json.query?.search || \"\" }}' = '' \n   OR paciente_tel = '{{ $json.query?.search || \"\" }}'\n   OR numero_cita = '{{ $json.query?.search || \"\" }}'\n   OR paciente_nombre ILIKE '%{{ $json.query?.search || \"\" }}%')\nORDER BY fecha_cita DESC, hora_cita DESC\nLIMIT 50",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        220,
+        0
+      ],
+      "id": "postgres-select-citas",
+      "name": "Select Citas",
+      "credentials": {
+        "postgres": {
+          "id": "94hGlbRqnjAbeSRh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        440,
+        0
+      ],
+      "id": "respond-webhook-listar",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Select Citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Citas": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "name": "cancelar",
+  "id": "canCitaWf1234567",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cancelar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "webhook-cancelar",
+      "name": "Webhook",
+      "webhookId": "235bba65-2893-45a2-a87f-c7a968358299"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE citas SET estado = 'cancelada' WHERE numero_cita = '{{ $json.body.numero_cita }}' RETURNING numero_cita, paciente_nombre, paciente_tel, paciente_email, especialidad, doctor, fecha_cita::text as fecha_cita, hora_cita::text as hora_cita, estado",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        220,
+        0
+      ],
+      "id": "postgres-update-estado",
+      "name": "Update Cita Estado",
+      "credentials": {
+        "postgres": {
+          "id": "94hGlbRqnjAbeSRh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO auditoria (accion, entidad, entidad_id, canal, resultado, datos) VALUES ('CITA_CANCELADA', 'citas', '{{ $json.numero_cita }}', 'formulario', 'exitoso', '{{ JSON.stringify($json) }}'::jsonb)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        0
+      ],
+      "id": "postgres-insert-auditoria",
+      "name": "Insert Auditoria",
+      "credentials": {
+        "postgres": {
+          "id": "94hGlbRqnjAbeSRh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-email",
+              "leftValue": "={{ $('Update Cita Estado').item.json.paciente_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        660,
+        0
+      ],
+      "id": "if-has-email",
+      "name": "If Has Email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@clinica.local",
+        "toEmail": "={{ $('Update Cita Estado').item.json.paciente_email }}",
+        "subject": "=Cancelación de Cita Médica - {{ $('Update Cita Estado').item.json.numero_cita }}",
+        "emailFormat": "html",
+        "html": "=<h3>Cita Cancelada</h3><p>Estimado(a) <b>{{ $('Update Cita Estado').item.json.paciente_nombre }}</b>,</p><p>Le informamos que su cita médica ha sido cancelada.</p><p><b>Detalles de la cita cancelada:</b><br>Número de cita: {{ $('Update Cita Estado').item.json.numero_cita }}<br>Especialidad: {{ $('Update Cita Estado').item.json.especialidad }}<br>Doctor: {{ $('Update Cita Estado').item.json.doctor }}<br>Fecha: {{ $('Update Cita Estado').item.json.fecha_cita }}<br>Hora: {{ $('Update Cita Estado').item.json.hora_cita }}</p><p>Si esto fue un error, por favor agende una nueva cita en nuestro portal.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        -80
+      ],
+      "id": "email-send-cancel",
+      "name": "Send Cancellation Email",
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials-placeholder",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"mensaje\": \"Cita cancelada correctamente\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "respond-webhook",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Update Cita Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Cita Estado": {
+      "main": [
+        [
+          {
+            "node": "Insert Auditoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Auditoria": {
+      "main": [
+        [
+          {
+            "node": "If Has Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Email": {
+      "main": [
+        [
+          {
+            "node": "Send Cancellation Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Send Cancellation Email": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}

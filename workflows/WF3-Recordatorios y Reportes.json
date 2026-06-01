@@ -1,0 +1,176 @@
+{
+  "name": "WF3-Recordatorios y Reportes",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  numero_cita,\n  paciente_nombre,\n  paciente_tel,\n  especialidad,\n  doctor,\n  fecha_cita::text as fecha_cita,\n  hora_cita::text as hora_cita,\n  motivo\nFROM citas\nWHERE fecha_cita = CURRENT_DATE + INTERVAL '1 day'\n  AND estado = 'confirmada'\nORDER BY hora_cita ASC",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "83b4878c-4ad0-4929-9987-b591c7c71723",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "UWoLhPW3ISgEDwKS",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1b348f23-fbd5-4ae1-bd53-53ea9bba44a5",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "73a11793-312f-4acb-bb9a-60f16f4f4982",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const citas = $input.all().map(i => i.json);\nconst fecha = citas[0]?.fecha_cita || 'mañana';\n\nlet listaCitas = citas.map(c => \n  `🕐 ${c.hora_cita} - ${c.paciente_nombre}\\n   📋 ${c.especialidad} | Tel: ${c.paciente_tel}`\n).join('\\n\\n');\n\nconst mensaje = `🏥 *Reporte de citas para mañana*\\n📅 Fecha: ${fecha}\\n👥 Total: ${citas.length} paciente(s)\\n\\n${listaCitas}`;\n\nreturn [{ json: { mensaje, fecha, total: citas.length, citas } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -112
+      ],
+      "id": "ce28445f-fca2-4db3-9949-089cd6dc07fa",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "2029522961",
+        "text": "= {{ $json.mensaje }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "15e47901-0162-4dc3-9776-53975f2bc3d4",
+      "name": "Send a text message",
+      "webhookId": "9643ac87-2004-4458-8d25-ebb04d0cd6af",
+      "credentials": {
+        "telegramApi": {
+          "id": "Koh0801o7naljX8K",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "80648510-4b44-45e8-a2c0-41660514425a",
+      "name": "Schedule Trigger",
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5547652f-facc-4c0d-91ae-8a09a7b3dd14",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "abfae62a79dc7c64aca4f70dff1942bf2ed56e3072142e3348370613d94c9a3a"
+  },
+  "id": "yc98Oygqra2uPcpk",
+  "tags": []
+}

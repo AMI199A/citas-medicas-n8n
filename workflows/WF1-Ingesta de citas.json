@@ -1,0 +1,315 @@
+{
+  "name": "WF1-Ingesta de citas",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "citas-ingesta",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "94b00259-6221-4097-9263-16af37fc98c5",
+      "name": "Webhook",
+      "webhookId": "155bba65-2893-45a2-a87f-c7a968358266"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "31b4dd3a-08ce-45cb-bc57-a2459d484ff1",
+              "name": "paciente_nombre",
+              "value": "= {{ $json.body.paciente_nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "4f5b993c-94bc-405f-b9c3-fd3b6412d309",
+              "name": "paciente_tel",
+              "value": "={{ $json.body.paciente_tel }}",
+              "type": "string"
+            },
+            {
+              "id": "2be98fd4-8a2c-4d33-8433-68299815a67a",
+              "name": "paciente_email",
+              "value": "={{ $json.body.paciente_email }}",
+              "type": "string"
+            },
+            {
+              "id": "d42c207e-e30e-41fb-8506-23d82e43379c",
+              "name": "especialidad",
+              "value": "={{ $json.body.especialidad }}",
+              "type": "string"
+            },
+            {
+              "id": "894a7050-1a71-4b87-ace4-8d58f99cc0dc",
+              "name": "doctor",
+              "value": "={{ $json.body.doctor }}",
+              "type": "string"
+            },
+            {
+              "id": "2b0a3f13-9ea5-472d-a728-1f91c82af338",
+              "name": "fecha_cita",
+              "value": "={{ $json.body.fecha_cita }}",
+              "type": "string"
+            },
+            {
+              "id": "86e09fb3-cbce-4522-bf2a-2ab370d17020",
+              "name": "hora_cita",
+              "value": "={{ $json.body.hora_cita }}",
+              "type": "string"
+            },
+            {
+              "id": "72df726b-9b20-4463-beaf-352cc5504b7d",
+              "name": "motivo",
+              "value": "={{ $json.body.motivo }}",
+              "type": "string"
+            },
+            {
+              "id": "cd54492b-c384-4e20-8a00-bad6627a5b11",
+              "name": "canal_ingreso",
+              "value": "={{ $json.body.canal_ingreso || 'formulario' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a8de901e-8635-4b90-a392-43a61af8701a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "55c93c32-e216-4d11-a969-16594cce78bd",
+              "leftValue": "={{ $json.paciente_nombre }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "2998b4bb-3f46-4e55-ad2f-da3cff59e64c",
+              "leftValue": "={{ $json.paciente_tel }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "61a5a7eb-76d6-4124-b9b8-51913e0bdbf9",
+              "leftValue": "={{ $json.especialidad }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "6022a26b-254a-40a8-b707-8b1179d47195",
+              "leftValue": "={{ $json.fecha_cita }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "c0e9bd1c-b3e1-4e6a-bda6-feb9d6c052f7",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO errores \n  (workflow_nombre, tipo_error, mensaje, datos_entrada)\nVALUES (\n  'WF1-Ingesta',\n  'Validacion',\n  'Campos obligatorios faltantes',\n  '{{ JSON.stringify($json) }}'\n)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        624,
+        96
+      ],
+      "id": "dd551989-0ac0-4544-ab54-708bb194c724",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "94hGlbRqnjAbeSRh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zYa6D0zjtL3BRTs4",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/zYa6D0zjtL3BRTs4",
+          "cachedResultName": "WF2-Procesamiento"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        -96
+      ],
+      "id": "4125914e-720d-4f29-be62-bec80366792d",
+      "name": "Call 'WF2-Procesamiento'"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"mensaje\": \"¡Cita agendada exitosamente!\",\n  \"numero_cita\": \"pendiente\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "84c8b1be-6d47-44b8-bd95-e1e02562e833",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"mensaje\": \"Datos incorrectos o campos faltantes\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        96
+      ],
+      "id": "3acda2f9-7bdd-48d5-84ac-1700ec2cab50",
+      "name": "Respond to Webhook1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Call 'WF2-Procesamiento'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'WF2-Procesamiento'": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "23c811a3-a569-48f8-b9f1-320d544ba792",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "abfae62a79dc7c64aca4f70dff1942bf2ed56e3072142e3348370613d94c9a3a"
+  },
+  "id": "3Rc21bNqR7Wae3A3",
+  "tags": []
+}
