@@ -180,7 +180,7 @@ docker compose down -v
 [Ver en Google Drive](https://drive.google.com/file/d/1iSjY3pEuWmKudCTie8DpZDp0YiSe6Zcr/view?usp=sharing)
 
 ---
-## DOCUMENTACION TECNICO
+## DOCUMENTACIÓN TECNICA
 
 [Ver en Google Drive](https://drive.google.com/drive/folders/16OF1SZwFPOLJUf8i3AhKeu5uQBgxW5sN?usp=sharing)
 
